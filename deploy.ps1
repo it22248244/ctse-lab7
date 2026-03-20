@@ -9,7 +9,7 @@
 
 # ─── CONFIGURATION (edit these before running) ──────────────
 $RESOURCE_GROUP   = "microservices-rg"
-$LOCATION         = "eastus"
+$LOCATION         = "southeastasia"
 $REGISTRY_NAME    = "sliitmicroregistry22248244"   # Student ID: IT22248244
 $ENVIRONMENT_NAME = "micro-env"
 $APP_NAME         = "gateway"
