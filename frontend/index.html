@@ -83,10 +83,13 @@
 
   <script>
     const STORAGE_KEY = 'ctse_lab7_gateway_url';
-    let gatewayBase = localStorage.getItem(STORAGE_KEY) || '';
+    const DEFAULT_GATEWAY = 'https://gateway.politewater-9f27abf2.southeastasia.azurecontainerapps.io';
+    let gatewayBase = localStorage.getItem(STORAGE_KEY) || DEFAULT_GATEWAY;
 
     // Populate saved URL on load
     document.getElementById('gatewayUrl').value = gatewayBase;
+    // Auto-save default on first load
+    if (!localStorage.getItem(STORAGE_KEY)) localStorage.setItem(STORAGE_KEY, DEFAULT_GATEWAY);
 
     function saveConfig() {
       gatewayBase = document.getElementById('gatewayUrl').value.trim().replace(/\/$/, '');
