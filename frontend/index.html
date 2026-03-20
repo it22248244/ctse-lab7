@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CTSE Lab 7 – Microservices Frontend</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; display: flex; flex-direction: column; }
+    header { background: linear-gradient(135deg, #0078d4 0%, #005a9e 100%); padding: 24px 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+    header h1 { font-size: 1.6rem; font-weight: 600; }
+    header p  { font-size: 0.9rem; opacity: 0.85; margin-top: 4px; }
+    main { flex: 1; padding: 32px; max-width: 900px; margin: 0 auto; width: 100%; }
+    .card { background: #1a1d2e; border: 1px solid #2d3748; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+    .card h2 { font-size: 1.1rem; color: #63b3ed; margin-bottom: 16px; }
+    .status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+    .dot-green { background: #48bb78; }
+    .dot-red   { background: #fc8181; }
+    .dot-grey  { background: #718096; }
+    button { background: #0078d4; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; transition: background 0.2s; }
+    button:hover { background: #005a9e; }
+    button:disabled { background: #2d3748; cursor: not-allowed; }
+    .response-box { background: #0d1117; border: 1px solid #2d3748; border-radius: 8px; padding: 16px; margin-top: 12px; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; word-break: break-all; min-height: 60px; color: #a0aec0; }
+    .badge { display: inline-block; font-size: 0.75rem; padding: 3px 10px; border-radius: 999px; font-weight: 600; }
+    .badge-blue   { background: #1a365d; color: #63b3ed; }
+    .badge-green  { background: #1c4532; color: #68d391; }
+    input[type="text"] { width: 100%; background: #0d1117; border: 1px solid #2d3748; border-radius: 8px; padding: 10px 14px; color: #e2e8f0; font-size: 0.9rem; margin-bottom: 10px; }
+    input[type="text"]:focus { outline: 2px solid #0078d4; }
+    footer { text-align: center; padding: 16px; font-size: 0.8rem; color: #4a5568; border-top: 1px solid #1a1d2e; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>☁ Azure Microservices Dashboard</h1>
+    <p>SLIIT – SE4010 Current Trends in Software Engineering &nbsp;|&nbsp; Lab 7</p>
+  </header>
+
+  <main>
+    <!-- Gateway URL Configuration -->
+    <div class="card">
+      <h2>⚙ Gateway Configuration</h2>
+      <label style="font-size:0.85rem; color:#a0aec0; display:block; margin-bottom:6px;">Gateway Base URL</label>
+      <input type="text" id="gatewayUrl" placeholder="https://gateway.xxx.eastus.azurecontainerapps.io" />
+      <button onclick="saveConfig()">Save Configuration</button>
+      <span id="configStatus" style="margin-left:12px; font-size:0.85rem; color:#68d391;"></span>
+    </div>
+
+    <!-- Health Check -->
+    <div class="card">
+      <h2>Health Check &nbsp;<span class="badge badge-blue">GET /health</span></h2>
+      <button onclick="checkHealth()" id="healthBtn">Check Gateway Health</button>
+      <div class="response-box" id="healthResponse">Click the button to check gateway health...</div>
+    </div>
+
+    <!-- Services Status -->
+    <div class="card">
+      <h2>Services Status &nbsp;<span class="badge badge-blue">GET /api/services</span></h2>
+      <button onclick="getServices()" id="servicesBtn">List Services</button>
+      <div class="response-box" id="servicesResponse">Click the button to list services...</div>
+    </div>
+
+    <!-- API Status -->
+    <div class="card">
+      <h2>API Status &nbsp;<span class="badge badge-blue">GET /api/status</span></h2>
+      <button onclick="getApiStatus()" id="apiStatusBtn">Get API Status</button>
+      <div class="response-box" id="apiStatusResponse">Click the button to get API status...</div>
+    </div>
+
+    <!-- Deployment Info -->
+    <div class="card">
+      <h2>Deployment Info &nbsp;<span class="badge badge-green">Azure</span></h2>
+      <table style="width:100%; font-size:0.85rem; border-collapse: collapse;">
+        <tr><td style="padding:6px 0; color:#a0aec0; width:40%">Frontend</td><td>Azure Static Web Apps</td></tr>
+        <tr><td style="padding:6px 0; color:#a0aec0">Gateway</td><td>Azure Container Apps</td></tr>
+        <tr><td style="padding:6px 0; color:#a0aec0">Registry</td><td>Azure Container Registry (ACR)</td></tr>
+        <tr><td style="padding:6px 0; color:#a0aec0">Environment</td><td id="envName">—</td></tr>
+        <tr><td style="padding:6px 0; color:#a0aec0">Last Checked</td><td id="lastChecked">—</td></tr>
+      </table>
+    </div>
+  </main>
+
+  <footer>SLIIT Faculty of Computing &nbsp;|&nbsp; SE4010 Lab 7 &nbsp;|&nbsp; Azure Microservices Deployment</footer>
+
+  <script>
+    const STORAGE_KEY = 'ctse_lab7_gateway_url';
+    let gatewayBase = localStorage.getItem(STORAGE_KEY) || '';
+
+    // Populate saved URL on load
+    document.getElementById('gatewayUrl').value = gatewayBase;
+
+    function saveConfig() {
+      gatewayBase = document.getElementById('gatewayUrl').value.trim().replace(/\/$/, '');
+      localStorage.setItem(STORAGE_KEY, gatewayBase);
+      document.getElementById('configStatus').textContent = 'Saved!';
+      setTimeout(() => document.getElementById('configStatus').textContent = '', 2000);
+    }
+
+    function setLoading(btnId, loading) {
+      const btn = document.getElementById(btnId);
+      btn.disabled = loading;
+      btn.textContent = loading ? 'Loading...' : btn.dataset.label || btn.textContent;
+    }
+
+    async function apiFetch(path, responseId, btnId) {
+      if (!gatewayBase) {
+        document.getElementById(responseId).textContent = 'ERROR: Please set the Gateway Base URL above first.';
+        return;
+      }
+      setLoading(btnId, true);
+      const el = document.getElementById(responseId);
+      el.textContent = 'Fetching...';
+      try {
+        const res = await fetch(gatewayBase + path);
+        const body = await res.json();
+        el.textContent = JSON.stringify(body, null, 2);
+        document.getElementById('lastChecked').textContent = new Date().toLocaleTimeString();
+        document.getElementById('envName').textContent = 'eastus (Azure)';
+      } catch (e) {
+        el.textContent = 'ERROR: ' + e.message + '\n\nMake sure the Gateway URL is correct and the service is running.';
+      } finally {
+        setLoading(btnId, false);
+      }
+    }
+
+    function checkHealth()   { apiFetch('/health',       'healthResponse',     'healthBtn'); }
+    function getServices()   { apiFetch('/api/services', 'servicesResponse',   'servicesBtn'); }
+    function getApiStatus()  { apiFetch('/api/status',   'apiStatusResponse',  'apiStatusBtn'); }
+  </script>
+</body>
+</html>
